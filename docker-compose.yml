@@ -1,8 +1,44 @@
+version: "3.8"
+
 services:
   lem-server:
-    build: .
-    ports:
-      - "1234:1234"
-    environment:
-      PORT: 1234
+    # ✅ Dein eigenes Image (GHCR). Passe das ggf. an.
+    # Beispiel: ghcr.io/lars-wenk/lem-server:latest
+    image: ghcr.io/lars-wenk/lem-server:latest
     restart: unless-stopped
+
+    # ✅ Optional, wenn du env-Variablen brauchst
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      # Beispiel: interner Port, auf dem dein WS-Server lauscht
+      PORT: 8080
+
+      # Optional: falls dein WS-Server Origin/CORS prüft
+      # ALLOWED_ORIGINS: "https://app.lem.one"
+
+    # ✅ Nur intern im Docker-Netz verfügbar (Traefik routet trotzdem drauf)
+    expose:
+      - "8080"
+
+    labels:
+      - traefik.enable=true
+
+      # ✅ Externer WebSocket Host (wenn du ws.lem.one nutzen willst)
+      - traefik.http.routers.lemone_ws.rule=Host(`ws.lem.one`)
+      - traefik.http.routers.lemone_ws.entrypoints=websecure
+      - traefik.http.routers.lemone_ws.tls=true
+
+      # ✅ Zielport im Container
+      - traefik.http.services.lemone_ws.loadbalancer.server.port=8080
+
+      # Optional aber oft hilfreich: Sticky Sessions bei WS (falls du später scale-out machst)
+      # - traefik.http.services.lemone_ws.loadbalancer.sticky=true
+
+    networks:
+      - traefik
+
+networks:
+  traefik:
+    external: true
