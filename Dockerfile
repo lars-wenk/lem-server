@@ -1,13 +1,12 @@
-FROM node:20-alpine
-
+FROM node:20-alpine AS deps
 WORKDIR /app
+COPY package*.json ./
+RUN npm ci
 
-COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
-
-COPY server.js ws-server.mjs ./
-
+FROM node:20-alpine AS runner
+WORKDIR /app
 ENV NODE_ENV=production
-EXPOSE 1234
-
-CMD ["node", "server.js"]
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+EXPOSE 8080
+CMD ["npm","start"]
